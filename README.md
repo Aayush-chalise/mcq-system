@@ -45,7 +45,7 @@ title: TEXT
 description: TEXT
 subject: TEXT
 question_count: INTEGER
-created_by: TEXT
+created_by: TEXT (Clerk User ID)
 status: TEXT (published/draft)
 created_at: TIMESTAMP
 ```
@@ -69,7 +69,7 @@ duration: INTEGER (in minutes)
 question_count: INTEGER
 passing_score: INTEGER (%)
 question_sets: JSONB (array of set IDs)
-created_by: TEXT
+created_by: TEXT (Clerk User ID)
 status: TEXT (published/draft)
 created_at: TIMESTAMP
 ```
@@ -145,12 +145,21 @@ In Clerk Dashboard:
 
 1. Go to [supabase.com](https://supabase.com)
 2. Create a new project
-3. Run the SQL schema below in the SQL editor
-4. Copy your URL and Anon Key to `.env`
+3. Go to SQL Editor and create new query
+4. Copy and paste the SQL schema below
+5. Copy your URL and Anon Key to `.env`
 
 ### SQL Schema
 
+Copy and paste **ALL** of this script in a single Supabase SQL query:
+
 ```sql
+-- DROP ALL TABLES (Start Fresh)
+DROP TABLE IF EXISTS results CASCADE;
+DROP TABLE IF EXISTS exams CASCADE;
+DROP TABLE IF EXISTS questions CASCADE;
+DROP TABLE IF EXISTS question_sets CASCADE;
+
 -- Question Sets Table
 CREATE TABLE question_sets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -205,20 +214,17 @@ ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE results ENABLE ROW LEVEL SECURITY;
 
--- Policies for question_sets (public read, admin write)
-CREATE POLICY "Allow public read" ON question_sets FOR SELECT USING (true);
-CREATE POLICY "Allow admin insert" ON question_sets FOR INSERT WITH CHECK (true);
+-- Simple Policies (No type mismatch)
+CREATE POLICY "question_sets_read" ON question_sets FOR SELECT USING (true);
+CREATE POLICY "questions_read" ON questions FOR SELECT USING (true);
+CREATE POLICY "exams_read" ON exams FOR SELECT USING (true);
+CREATE POLICY "results_insert" ON results FOR INSERT WITH CHECK (true);
+CREATE POLICY "results_read" ON results FOR SELECT USING (true);
 
--- Policies for questions (public read)
-CREATE POLICY "Allow public read" ON questions FOR SELECT USING (true);
-
--- Policies for exams (public read, admin write)
-CREATE POLICY "Allow public read" ON exams FOR SELECT USING (true);
-CREATE POLICY "Allow admin insert" ON exams FOR INSERT WITH CHECK (true);
-
--- Policies for results (users see own, admin sees all)
-CREATE POLICY "Allow user see own" ON results FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Allow insert" ON results FOR INSERT WITH CHECK (true);
+-- Indexes for better performance
+CREATE INDEX idx_questions_set_id ON questions(set_id);
+CREATE INDEX idx_results_user_id ON results(user_id);
+CREATE INDEX idx_results_set_id ON results(set_id);
 ```
 
 ## Usage
@@ -231,10 +237,10 @@ CREATE POLICY "Allow insert" ON results FOR INSERT WITH CHECK (true);
 
 ### For Admins
 1. Sign up and have admin role added in Clerk
-2. Access Admin Panel
-3. Create question sets
+2. Access Admin Panel via navbar
+3. Create question sets with questions
 4. Create exams combining multiple question sets
-5. View user results
+5. View all user results and analytics
 
 ## Build
 
@@ -280,6 +286,23 @@ src/
 - [ ] Mobile app version
 - [ ] PDF result export
 - [ ] Question bank search and filtering
+
+## Troubleshooting
+
+### SQL Error: "operator does not exist: text = uuid"
+- Make sure you're using the corrected SQL schema above
+- Delete previous tables and run fresh
+- Avoid comparing TEXT with UUID in policies
+
+### Clerk Keys Not Working
+- Verify you copied the **Publishable Key**, not the Secret Key
+- Make sure `.env` file is in the root directory
+- Restart dev server after adding env variables
+
+### Supabase Connection Issues
+- Check that URL and Anon Key are correct
+- Verify Row Level Security policies are enabled
+- Check browser console for detailed errors
 
 ## License
 
