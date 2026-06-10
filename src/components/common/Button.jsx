@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 function Button({
   children,
   variant = 'primary',
@@ -6,15 +8,14 @@ function Button({
   disabled = false,
   ...props
 }) {
-  const baseStyles = 'font-semibold rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 inline-flex items-center justify-center'
+  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 inline-flex items-center justify-center'
 
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300',
-    secondary: 'bg-gray-300 text-gray-800 hover:bg-gray-400 focus:ring-gray-500 disabled:bg-gray-200',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:bg-green-300',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300',
-    warning: 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500 disabled:bg-yellow-300',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500 disabled:border-blue-300 disabled:text-blue-300',
+    primary: 'bg-accent text-primary hover:bg-secondary focus:ring-accent disabled:bg-gray-400',
+    secondary: 'bg-white/10 text-white border border-white/20 hover:bg-white/20 focus:ring-white disabled:opacity-50',
+    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:bg-green-400',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-400',
+    outline: 'border-2 border-accent text-accent hover:bg-accent hover:text-primary focus:ring-accent disabled:border-gray-400 disabled:text-gray-400',
   }
 
   const sizes = {
@@ -24,13 +25,15 @@ function Button({
   }
 
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: disabled ? 1 : 1.05 }}
+      whileTap={{ scale: disabled ? 1 : 0.98 }}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled}
       {...props}
     >
       {children}
-    </button>
+    </motion.button>
   )
 }
 
