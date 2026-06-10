@@ -63,7 +63,7 @@ function Admin() {
       }
 
       // Create question set
-      const { data: setData, error: setError } = await supabase
+      const { data: setData, error: createSetError } = await supabase
         .from('question_sets')
         .insert([
           {
@@ -77,7 +77,7 @@ function Admin() {
         ])
         .select()
 
-      if (setError) throw setError
+      if (createSetError) throw createSetError
 
       const setId = setData[0].id
 
