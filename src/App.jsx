@@ -1,17 +1,23 @@
-import { ClerkProvider } from '@clerk/clerk-react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedRoute } from './components/ProtectedRoute'
-import Navbar from './components/common/Navbar'
-import Home from './pages/Home'
-import QuestionBank from './pages/QuestionBank'
-import Exams from './pages/Exams'
-import Results from './pages/Results'
-import Admin from './pages/Admin'
+import { ClerkProvider } from "@clerk/clerk-react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Navbar from "./components/common/Navbar";
+import Home from "./pages/Home";
+import QuestionBank from "./pages/QuestionBank";
+import Exams from "./pages/Exams";
+import Results from "./pages/Results";
+import ResultDetail from "./pages/ResultDetails";
+import Admin from "./pages/Admin";
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!clerkPubKey) {
-  throw new Error('Missing Clerk Publishable Key')
+  throw new Error("Missing Clerk Publishable Key");
 }
 
 function App() {
@@ -46,6 +52,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* ✅ NEW: Result detail route — was missing, causing redirect to home */}
+            <Route
+              path="/result/:id"
+              element={
+                <ProtectedRoute>
+                  <ResultDetail />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin"
               element={
@@ -59,7 +74,7 @@ function App() {
         </main>
       </Router>
     </ClerkProvider>
-  )
+  );
 }
 
-export default App
+export default App;
