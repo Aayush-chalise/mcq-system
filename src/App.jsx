@@ -13,6 +13,7 @@ import Exams from "./pages/Exams";
 import Results from "./pages/Results";
 import ResultDetail from "./pages/ResultDetails";
 import Admin from "./pages/Admin";
+import TakeExam from "./pages/TakeExam";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -66,6 +67,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exam/:id"
+              element={
+                <ProtectedRoute>
+                  <TakeExam />
                 </ProtectedRoute>
               }
             />
