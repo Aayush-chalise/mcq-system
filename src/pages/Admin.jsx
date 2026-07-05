@@ -15,6 +15,7 @@ import {
   BookOpen,
   ClipboardList,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -55,6 +56,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 // ─── Main Admin Component ─────────────────────────────────────────────────────
 function Admin() {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("sets");
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -120,7 +122,7 @@ function Admin() {
     if (!e) setAllPublishedSets(data || []);
   };
 
-  // ── access guard ────────────────────────────────────────────────────────────
+  // ── access guard ──────────────────────────────────────────────────────────
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-blue-900 to-primary text-white pt-24 pb-8 flex items-center justify-center">
@@ -133,7 +135,7 @@ function Admin() {
     );
   }
 
-  // ── question helpers ────────────────────────────────────────────────────────
+  // ── question helpers ───────────────────────────────────────────────────────
   const handleAddQuestion = () => {
     setQuestions((prev) => [
       ...prev,
@@ -170,12 +172,10 @@ function Admin() {
 
   const toggleSetSelection = (setId) =>
     setSelectedSets((prev) =>
-      prev.includes(setId)
-        ? prev.filter((id) => id !== setId)
-        : [...prev, setId],
+      prev.includes(setId) ? prev.filter((id) => id !== setId) : [...prev, setId],
     );
 
-  // ── open create form ────────────────────────────────────────────────────────
+  // ── open create form ──────────────────────────────────────────────────────
   const openCreate = async () => {
     setMode("create");
     setEditingId(null);
@@ -189,7 +189,7 @@ function Admin() {
     if (activeTab === "exams") await fetchPublishedSets();
   };
 
-  // ── open edit form ──────────────────────────────────────────────────────────
+  // ── open edit form ────────────────────────────────────────────────────────
   const openEdit = async (item) => {
     setMode("edit");
     setEditingId(item.id);
@@ -247,7 +247,7 @@ function Admin() {
     setSuccess(null);
   };
 
-  // ── create / update question set ────────────────────────────────────────────
+  // ── create / update question set ───────────────────────────────────────────
   const handleSaveSet = async () => {
     try {
       setLoading(true);
@@ -325,7 +325,7 @@ function Admin() {
     }
   };
 
-  // ── create / update exam ────────────────────────────────────────────────────
+  // ── create / update exam ───────────────────────────────────────────────────
   const handleSaveExam = async () => {
     try {
       setLoading(true);
@@ -384,7 +384,7 @@ function Admin() {
     }
   };
 
-  // ── delete ──────────────────────────────────────────────────────────────────
+  // ── delete (optimistic UI) ─────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -395,8 +395,15 @@ function Admin() {
         .delete()
         .eq("id", confirmDelete.id);
       if (e) throw e;
+
+      // Optimistically update UI
+      if (confirmDelete.type === "set") {
+        setQuestionSets((prev) => prev.filter((s) => s.id !== confirmDelete.id));
+      } else {
+        setExams((prev) => prev.filter((x) => x.id !== confirmDelete.id));
+      }
+
       setSuccess(`✅ "${confirmDelete.title}" deleted.`);
-      fetchList();
       setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
       setError(err.message || "Failed to delete");
@@ -406,7 +413,7 @@ function Admin() {
     }
   };
 
-  // ── render ──────────────────────────────────────────────────────────────────
+  // ── render ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-blue-900 to-primary text-white pt-24 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -473,8 +480,7 @@ function Admin() {
                 size="lg"
                 className="flex items-center gap-2"
               >
-                <Plus size={20} /> Create{" "}
-                {activeTab === "sets" ? "Question Set" : "Exam"}
+                <Plus size={20} /> Create {activeTab === "sets" ? "Question Set" : "Exam"}
               </Button>
             </div>
 
@@ -484,9 +490,7 @@ function Admin() {
               questionSets.length === 0 ? (
                 <GlassCard className="text-center py-10">
                   <BookOpen size={40} className="mx-auto text-white/30 mb-3" />
-                  <p className="text-white/60">
-                    No question sets yet. Create one!
-                  </p>
+                  <p className="text-white/60">No question sets yet. Create one!</p>
                 </GlassCard>
               ) : (
                 <div className="grid gap-4">
@@ -500,21 +504,15 @@ function Admin() {
                       <GlassCard className="border-accent/20 hover:border-accent/40 transition-all">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-accent truncate">
-                              {set.title}
-                            </h3>
+                            <h3 className="text-lg font-bold text-accent truncate">{set.title}</h3>
                             <p className="text-white/60 text-sm">
-                              {set.subject} • {set.question_count} questions •{" "}
-                              <span
-                                className={`font-medium ${set.status === "published" ? "text-green-400" : "text-yellow-400"}`}
-                              >
+                              {set.subject} • {set.question_count} questions • {" "}
+                              <span className={`font-medium ${set.status === "published" ? "text-green-400" : "text-yellow-400"}`}>
                                 {set.status}
                               </span>
                             </p>
                             {set.description && (
-                              <p className="text-white/50 text-xs mt-1 truncate">
-                                {set.description}
-                              </p>
+                              <p className="text-white/50 text-xs mt-1 truncate">{set.description}</p>
                             )}
                           </div>
                           <div className="flex gap-2 shrink-0">
@@ -546,10 +544,7 @@ function Admin() {
             ) : // Exams list
             exams.length === 0 ? (
               <GlassCard className="text-center py-10">
-                <ClipboardList
-                  size={40}
-                  className="mx-auto text-white/30 mb-3"
-                />
+                <ClipboardList size={40} className="mx-auto text-white/30 mb-3" />
                 <p className="text-white/60">No exams yet. Create one!</p>
               </GlassCard>
             ) : (
@@ -564,25 +559,24 @@ function Admin() {
                     <GlassCard className="border-accent/20 hover:border-accent/40 transition-all">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-accent truncate">
-                            {exam.title}
-                          </h3>
+                          <h3 className="text-lg font-bold text-accent truncate">{exam.title}</h3>
                           <p className="text-white/60 text-sm">
-                            {exam.duration} min • {exam.question_count}{" "}
-                            questions • Pass: {exam.passing_score}% •{" "}
-                            <span
-                              className={`font-medium ${exam.status === "published" ? "text-green-400" : "text-yellow-400"}`}
-                            >
+                            {exam.duration} min • {exam.question_count} questions • Pass: {exam.passing_score}% • {" "}
+                            <span className={`font-medium ${exam.status === "published" ? "text-green-400" : "text-yellow-400"}`}>
                               {exam.status}
                             </span>
                           </p>
                           {exam.description && (
-                            <p className="text-white/50 text-xs mt-1 truncate">
-                              {exam.description}
-                            </p>
+                            <p className="text-white/50 text-xs mt-1 truncate">{exam.description}</p>
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => navigate(`/exam/${exam.id}`)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600/30 hover:bg-green-600/50 text-green-200 text-sm font-medium transition-all"
+                          >
+                            <BookOpen size={14} /> Start
+                          </button>
                           <button
                             onClick={() => openEdit(exam)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 text-sm font-medium transition-all"
@@ -621,9 +615,7 @@ function Admin() {
             <GlassCard className="border-accent/30">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-accent">
-                  {mode === "create"
-                    ? "Create Question Set"
-                    : "Edit Question Set"}
+                  {mode === "create" ? "Create Question Set" : "Edit Question Set"}
                 </h2>
                 <button
                   onClick={closeForm}
@@ -635,43 +627,31 @@ function Admin() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Title *
-                  </label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Title *</label>
                   <input
                     type="text"
                     placeholder="e.g., Physics Basics"
                     value={formData.title || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Subject *
-                  </label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Subject *</label>
                   <input
                     type="text"
                     placeholder="e.g., Physics"
                     value={formData.subject || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, subject: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Description
-                  </label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Description</label>
                   <textarea
                     placeholder="Description of the question set"
                     value={formData.description || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows="3"
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
@@ -685,9 +665,7 @@ function Admin() {
               {questions.map((q, idx) => (
                 <GlassCard key={q.id} className="border-white/20">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-bold text-accent">
-                      Question {idx + 1}
-                    </h4>
+                    <h4 className="text-lg font-bold text-accent">Question {idx + 1}</h4>
                     {questions.length > 1 && (
                       <button
                         onClick={() => handleRemoveQuestion(q.id)}
@@ -699,14 +677,10 @@ function Admin() {
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">
-                        Question Text *
-                      </label>
+                      <label className="block text-sm font-medium text-white/80 mb-2">Question Text *</label>
                       <textarea
                         value={q.text}
-                        onChange={(e) =>
-                          handleQuestionChange(q.id, "text", e.target.value)
-                        }
+                        onChange={(e) => handleQuestionChange(q.id, "text", e.target.value)}
                         placeholder="Enter question text"
                         rows="2"
                         className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
@@ -715,15 +689,11 @@ function Admin() {
                     <div className="space-y-2">
                       {q.options.map((opt, optIdx) => (
                         <div key={optIdx}>
-                          <label className="block text-sm font-medium text-white/80 mb-1">
-                            Option {String.fromCharCode(65 + optIdx)} *
-                          </label>
+                          <label className="block text-sm font-medium text-white/80 mb-1">Option {String.fromCharCode(65 + optIdx)} *</label>
                           <input
                             type="text"
                             value={opt}
-                            onChange={(e) =>
-                              handleOptionChange(q.id, optIdx, e.target.value)
-                            }
+                            onChange={(e) => handleOptionChange(q.id, optIdx, e.target.value)}
                             placeholder={`Enter option ${String.fromCharCode(65 + optIdx)}`}
                             className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                           />
@@ -731,27 +701,15 @@ function Admin() {
                       ))}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">
-                        Correct Answer *
-                      </label>
+                      <label className="block text-sm font-medium text-white/80 mb-2">Correct Answer *</label>
                       <select
                         value={q.correctAnswer}
-                        onChange={(e) =>
-                          handleQuestionChange(
-                            q.id,
-                            "correctAnswer",
-                            e.target.value,
-                          )
-                        }
+                        onChange={(e) => handleQuestionChange(q.id, "correctAnswer", e.target.value)}
                         className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:border-accent"
                       >
-                        <option value="" disabled>
-                          Select correct answer
-                        </option>
+                        <option value="" disabled>Select correct answer</option>
                         {["A", "B", "C", "D"].map((l) => (
-                          <option key={l} value={l}>
-                            {l}
-                          </option>
+                          <option key={l} value={l}>{l}</option>
                         ))}
                       </select>
                     </div>
@@ -760,158 +718,62 @@ function Admin() {
               ))}
             </div>
 
-            <Button
-              onClick={handleAddQuestion}
-              variant="secondary"
-              size="md"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={handleAddQuestion} variant="secondary" size="md" className="flex items-center gap-2">
               <Plus size={20} /> Add Question
             </Button>
 
             <div className="flex gap-4">
-              <Button
-                onClick={handleSaveSet}
-                variant="primary"
-                size="lg"
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading
-                  ? "Saving..."
-                  : mode === "create"
-                    ? "Create Question Set"
-                    : "Save Changes"}
+              <Button onClick={handleSaveSet} variant="primary" size="lg" disabled={loading} className="flex-1">
+                {loading ? "Saving..." : mode === "create" ? "Create Question Set" : "Save Changes"}
               </Button>
-              <Button
-                onClick={closeForm}
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
+              <Button onClick={closeForm} variant="secondary" size="lg" className="flex-1">Cancel</Button>
             </div>
           </motion.div>
         )}
 
         {/* ── EXAM FORM (create / edit) ───────────────────────────────────── */}
         {mode !== null && activeTab === "exams" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             <GlassCard className="border-accent/30">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-accent">
-                  {mode === "create" ? "Create Exam" : "Edit Exam"}
-                </h2>
-                <button
-                  onClick={closeForm}
-                  className="text-white/50 hover:text-white transition-colors"
-                >
-                  <X size={22} />
-                </button>
+                <h2 className="text-2xl font-bold text-accent">{mode === "create" ? "Create Exam" : "Edit Exam"}</h2>
+                <button onClick={closeForm} className="text-white/50 hover:text-white transition-colors"><X size={22} /></button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Exam Title *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Physics Mid-Term Exam"
-                    value={formData.examTitle || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, examTitle: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
-                  />
+                  <label className="block text-sm font-medium text-white/80 mb-2">Exam Title *</label>
+                  <input type="text" placeholder="e.g., Physics Mid-Term Exam" value={formData.examTitle || ""} onChange={(e) => setFormData({ ...formData, examTitle: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    placeholder="Exam description"
-                    value={formData.examDescription || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        examDescription: e.target.value,
-                      })
-                    }
-                    rows="3"
-                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
-                  />
+                  <label className="block text-sm font-medium text-white/80 mb-2">Description</label>
+                  <textarea placeholder="Exam description" value={formData.examDescription || ""} onChange={(e) => setFormData({ ...formData, examDescription: e.target.value })} rows="3" className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
-                      Duration (minutes) *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="60"
-                      value={formData.examDuration || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          examDuration: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
-                    />
+                    <label className="block text-sm font-medium text-white/80 mb-2">Duration (minutes) *</label>
+                    <input type="number" placeholder="60" value={formData.examDuration || ""} onChange={(e) => setFormData({ ...formData, examDuration: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
-                      Passing Score (%) *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="60"
-                      value={formData.passingScore || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          passingScore: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
-                    />
+                    <label className="block text-sm font-medium text-white/80 mb-2">Passing Score (%) *</label>
+                    <input type="number" placeholder="60" value={formData.passingScore || ""} onChange={(e) => setFormData({ ...formData, passingScore: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
                   </div>
                 </div>
               </div>
             </GlassCard>
 
             <GlassCard className="border-accent/30">
-              <h3 className="text-xl font-bold text-accent mb-4">
-                Select Question Sets *
-              </h3>
+              <h3 className="text-xl font-bold text-accent mb-4">Select Question Sets *</h3>
               {allPublishedSets.length === 0 ? (
-                <p className="text-white/60">
-                  No question sets available. Create some first!
-                </p>
+                <p className="text-white/60">No question sets available. Create some first!</p>
               ) : (
                 <div className="space-y-2">
                   {allPublishedSets.map((set) => (
-                    <label
-                      key={set.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-all border border-white/10"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSets.includes(set.id)}
-                        onChange={() => toggleSetSelection(set.id)}
-                        className="w-4 h-4 cursor-pointer accent-accent"
-                      />
+                    <label key={set.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-all border border-white/10">
+                      <input type="checkbox" checked={selectedSets.includes(set.id)} onChange={() => toggleSetSelection(set.id)} className="w-4 h-4 cursor-pointer accent-accent" />
                       <div className="flex-1">
                         <p className="font-medium text-white">{set.title}</p>
-                        <p className="text-sm text-white/60">
-                          {set.subject} • {set.question_count} questions
-                        </p>
+                        <p className="text-sm text-white/60">{set.subject} • {set.question_count} questions</p>
                       </div>
                     </label>
                   ))}
@@ -920,27 +782,8 @@ function Admin() {
             </GlassCard>
 
             <div className="flex gap-4">
-              <Button
-                onClick={handleSaveExam}
-                variant="primary"
-                size="lg"
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading
-                  ? "Saving..."
-                  : mode === "create"
-                    ? "Create Exam"
-                    : "Save Changes"}
-              </Button>
-              <Button
-                onClick={closeForm}
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
+              <Button onClick={handleSaveExam} variant="primary" size="lg" disabled={loading} className="flex-1">{loading ? "Saving..." : mode === "create" ? "Create Exam" : "Save Changes"}</Button>
+              <Button onClick={closeForm} variant="secondary" size="lg" className="flex-1">Cancel</Button>
             </div>
           </motion.div>
         )}
