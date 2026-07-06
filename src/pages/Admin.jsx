@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../lib/supabase";
-import Button from "../components/common/Button";
-import GlassCard from "../components/common/GlassCard";
-import ErrorAlert from "../components/common/ErrorAlert";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../lib/supabase'
+import Button from '../components/common/Button'
+import GlassCard from '../components/common/GlassCard'
+import ErrorAlert from '../components/common/ErrorAlert'
+import LoadingSpinner from '../components/common/LoadingSpinner'
 import {
   Plus,
   CheckCircle,
@@ -14,8 +14,7 @@ import {
   X,
   BookOpen,
   ClipboardList,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+} from 'lucide-react'
 
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -50,79 +49,79 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
         </GlassCard>
       </motion.div>
     </div>
-  );
+  )
 }
 
 // ─── Main Admin Component ─────────────────────────────────────────────────────
 function Admin() {
-  const { user } = useUser();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("sets");
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { user } = useUser()
+  const [activeTab, setActiveTab] = useState('sets')
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   // list data
-  const [questionSets, setQuestionSets] = useState([]);
-  const [exams, setExams] = useState([]);
-  const [listLoading, setListLoading] = useState(true);
+  const [questionSets, setQuestionSets] = useState([])
+  const [exams, setExams] = useState([])
+  const [listLoading, setListLoading] = useState(true)
 
   // form state
-  const [mode, setMode] = useState(null); // null | 'create' | 'edit'
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({});
+  const [mode, setMode] = useState(null) // null | 'create' | 'edit'
+  const [editingId, setEditingId] = useState(null)
+  const [formData, setFormData] = useState({})
   const [questions, setQuestions] = useState([
-    { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
-  ]);
-  const [allPublishedSets, setAllPublishedSets] = useState([]);
-  const [selectedSets, setSelectedSets] = useState([]);
+    { id: crypto.randomUUID(), text: '', options: ['', '', '', ''], correctAnswer: '' },
+  ])
+  const [allPublishedSets, setAllPublishedSets] = useState([])
+  const [selectedSets, setSelectedSets] = useState([])
 
   // delete confirm
-  const [confirmDelete, setConfirmDelete] = useState(null); // { type, id, title }
+  const [confirmDelete, setConfirmDelete] = useState(null) // { type, id, title }
 
-  const isAdmin = user?.publicMetadata?.role === "admin";
+  const isAdmin = user?.publicMetadata?.role === 'admin'
 
   // ── fetch lists on tab change ───────────────────────────────────────────────
   useEffect(() => {
-    if (isAdmin) fetchList();
-  }, [activeTab, isAdmin]);
+    if (isAdmin) fetchList()
+  }, [activeTab, isAdmin])
 
   const fetchList = async () => {
     try {
-      setListLoading(true);
-      if (activeTab === "sets") {
+      setListLoading(true)
+      if (activeTab === 'sets') {
         const { data, error: e } = await supabase
-          .from("question_sets")
-          .select("*")
-          .eq("created_by", user.id)
-          .order("created_at", { ascending: false });
-        if (e) throw e;
-        setQuestionSets(data || []);
+          .from('question_sets')
+          .select('*')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+        if (e) throw e
+        setQuestionSets(data || [])
       } else {
         const { data, error: e } = await supabase
-          .from("exams")
-          .select("*")
-          .eq("created_by", user.id)
-          .order("created_at", { ascending: false });
-        if (e) throw e;
-        setExams(data || []);
+          .from('exams')
+          .select('*')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+        if (e) throw e
+        setExams(data || [])
       }
     } catch (err) {
-      setError("Failed to load data");
+      setError('Failed to load data')
+      console.error(err)
     } finally {
-      setListLoading(false);
+      setListLoading(false)
     }
-  };
+  }
 
   const fetchPublishedSets = async () => {
     const { data, error: e } = await supabase
-      .from("question_sets")
-      .select("id, title, subject, question_count")
-      .eq("status", "published");
-    if (!e) setAllPublishedSets(data || []);
-  };
+      .from('question_sets')
+      .select('id, title, subject, question_count')
+      .eq('status', 'published')
+    if (!e) setAllPublishedSets(data || [])
+  }
 
-  // ── access guard ──────────────────────────────────────────────────────────
+  // ── access guard ─────────────────────────────────────────���────────────────
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-blue-900 to-primary text-white pt-24 pb-8 flex items-center justify-center">
@@ -132,7 +131,7 @@ function Admin() {
           </p>
         </GlassCard>
       </div>
-    );
+    )
   }
 
   // ── question helpers ───────────────────────────────────────────────────────
@@ -141,22 +140,22 @@ function Admin() {
       ...prev,
       {
         id: crypto.randomUUID(),
-        text: "",
-        options: ["", "", "", ""],
-        correctAnswer: "",
+        text: '',
+        options: ['', '', '', ''],
+        correctAnswer: '',
       },
-    ]);
-  };
+    ])
+  }
 
   const handleRemoveQuestion = (id) => {
-    if (questions.length === 1) return;
-    setQuestions((prev) => prev.filter((q) => q.id !== id));
-  };
+    if (questions.length === 1) return
+    setQuestions((prev) => prev.filter((q) => q.id !== id))
+  }
 
   const handleQuestionChange = (id, field, value) =>
     setQuestions((prev) =>
       prev.map((q) => (q.id === id ? { ...q, [field]: value } : q)),
-    );
+    )
 
   const handleOptionChange = (id, optIdx, value) =>
     setQuestions((prev) =>
@@ -168,98 +167,98 @@ function Admin() {
             }
           : q,
       ),
-    );
+    )
 
   const toggleSetSelection = (setId) =>
     setSelectedSets((prev) =>
       prev.includes(setId) ? prev.filter((id) => id !== setId) : [...prev, setId],
-    );
+    )
 
-  // ── open create form ──────────────────────────────────────────────────────
+  // ── open create form ───────────────────────────────────────────────────────
   const openCreate = async () => {
-    setMode("create");
-    setEditingId(null);
-    setFormData({});
+    setMode('create')
+    setEditingId(null)
+    setFormData({})
     setQuestions([
-      { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
-    ]);
-    setSelectedSets([]);
-    setError(null);
-    setSuccess(null);
-    if (activeTab === "exams") await fetchPublishedSets();
-  };
+      { id: crypto.randomUUID(), text: '', options: ['', '', '', ''], correctAnswer: '' },
+    ])
+    setSelectedSets([])
+    setError(null)
+    setSuccess(null)
+    if (activeTab === 'exams') await fetchPublishedSets()
+  }
 
   // ── open edit form ────────────────────────────────────────────────────────
   const openEdit = async (item) => {
-    setMode("edit");
-    setEditingId(item.id);
-    setError(null);
-    setSuccess(null);
+    setMode('edit')
+    setEditingId(item.id)
+    setError(null)
+    setSuccess(null)
 
-    if (activeTab === "sets") {
+    if (activeTab === 'sets') {
       setFormData({
         title: item.title,
         subject: item.subject,
-        description: item.description || "",
-      });
+        description: item.description || '',
+      })
       // load existing questions
       const { data: qs } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("set_id", item.id)
-        .order("created_at", { ascending: true });
+        .from('questions')
+        .select('*')
+        .eq('set_id', item.id)
+        .order('created_at', { ascending: true })
 
       setQuestions(
         (qs || []).map((q) => ({
-          id: q.id, // keep DB UUID, use for identification
+          id: q.id, // keep DB UUID
           text: q.question_text,
           options: Array.isArray(q.options)
             ? q.options
-            : JSON.parse(q.options || "[]"),
+            : JSON.parse(q.options || '[]'),
           correctAnswer: q.correct_answer,
         })),
-      );
+      )
     } else {
       setFormData({
         examTitle: item.title,
-        examDescription: item.description || "",
+        examDescription: item.description || '',
         examDuration: String(item.duration),
         passingScore: String(item.passing_score),
-      });
+      })
       const sets = Array.isArray(item.question_sets)
         ? item.question_sets
-        : JSON.parse(item.question_sets || "[]");
-      setSelectedSets(sets);
-      await fetchPublishedSets();
+        : JSON.parse(item.question_sets || '[]')
+      setSelectedSets(sets)
+      await fetchPublishedSets()
     }
-  };
+  }
 
   const closeForm = () => {
-    setMode(null);
-    setEditingId(null);
-    setFormData({});
+    setMode(null)
+    setEditingId(null)
+    setFormData({})
     setQuestions([
-      { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
-    ]);
-    setSelectedSets([]);
-    setError(null);
-    setSuccess(null);
-  };
+      { id: crypto.randomUUID(), text: '', options: ['', '', '', ''], correctAnswer: '' },
+    ])
+    setSelectedSets([])
+    setError(null)
+    setSuccess(null)
+  }
 
   // ── create / update question set ───────────────────────────────────────────
   const handleSaveSet = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
       if (!formData.title || !formData.subject) {
-        setError("Please fill in all required fields");
-        return;
+        setError('Please fill in all required fields')
+        return
       }
 
-      if (mode === "create") {
+      if (mode === 'create') {
         const { data: setData, error: setErr } = await supabase
-          .from("question_sets")
+          .from('question_sets')
           .insert([
             {
               title: formData.title,
@@ -267,74 +266,79 @@ function Admin() {
               subject: formData.subject,
               question_count: questions.length,
               created_by: user.id,
-              status: "published",
+              status: 'published',
             },
           ])
-          .select();
-        if (setErr) throw setErr;
+          .select()
+        if (setErr) throw setErr
 
-        const setId = setData[0].id;
+        const setId = setData[0].id
         const toInsert = questions.map((q) => ({
           set_id: setId,
           question_text: q.text,
           options: JSON.stringify(q.options),
           correct_answer: q.correctAnswer,
-        }));
+        }))
         const { error: qErr } = await supabase
-          .from("questions")
-          .insert(toInsert);
-        if (qErr) throw qErr;
+          .from('questions')
+          .insert(toInsert)
+        if (qErr) throw qErr
 
-        setSuccess(`✅ Question Set "${formData.title}" created successfully!`);
+        setSuccess(`✅ Question Set "${formData.title}" created successfully!`)
       } else {
-        // update set metadata
+        // ✅ FIX: Delete old questions FIRST with error check
+        const { error: deleteErr } = await supabase
+          .from('questions')
+          .delete()
+          .eq('set_id', editingId)
+
+        if (deleteErr) {
+          console.error('Delete error:', deleteErr)
+          throw new Error(`Failed to delete old questions: ${deleteErr.message}`)
+        }
+
+        // ✅ Update set metadata
         const { error: setErr } = await supabase
-          .from("question_sets")
+          .from('question_sets')
           .update({
             title: formData.title,
             description: formData.description,
             subject: formData.subject,
             question_count: questions.length,
           })
-          .eq("id", editingId);
-        if (setErr) throw setErr;
+          .eq('id', editingId)
+        if (setErr) throw setErr
 
-        // Delete all old questions first
-        const { error: deleteErr } = await supabase
-          .from("questions")
-          .delete()
-          .eq("set_id", editingId);
-        if (deleteErr) throw deleteErr;
-
-        // Then insert the new questions
+        // ✅ FIX: Insert NEW questions (with fresh UUIDs, not old DB IDs)
         const toInsert = questions.map((q) => ({
           set_id: editingId,
           question_text: q.text,
           options: JSON.stringify(q.options),
           correct_answer: q.correctAnswer,
-        }));
+        }))
         const { error: qErr } = await supabase
-          .from("questions")
-          .insert(toInsert);
-        if (qErr) throw qErr;
+          .from('questions')
+          .insert(toInsert)
+        if (qErr) throw qErr
 
-        setSuccess(`✅ Question Set "${formData.title}" updated successfully!`);
+        setSuccess(`✅ Question Set "${formData.title}" updated successfully!`)
       }
 
-      fetchList();
-      setTimeout(closeForm, 1800);
+      fetchList()
+      setTimeout(closeForm, 1800)
     } catch (err) {
-      setError(err.message || "Failed to save question set");
+      console.error('Save error:', err)
+      setError(err.message || 'Failed to save question set')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // ── create / update exam ───────────────────────────────────────────────────
   const handleSaveExam = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
       if (
         !formData.examTitle ||
@@ -343,18 +347,18 @@ function Admin() {
         selectedSets.length === 0
       ) {
         setError(
-          "Please fill in all required fields and select at least one question set",
-        );
-        return;
+          'Please fill in all required fields and select at least one question set',
+        )
+        return
       }
 
       const selectedSetData = allPublishedSets.filter((s) =>
         selectedSets.includes(s.id),
-      );
+      )
       const totalQuestions = selectedSetData.reduce(
         (sum, s) => sum + s.question_count,
         0,
-      );
+      )
 
       const payload = {
         title: formData.examTitle,
@@ -364,66 +368,69 @@ function Admin() {
         passing_score: parseInt(formData.passingScore),
         question_sets: JSON.stringify(selectedSets),
         created_by: user.id,
-        status: "published",
-      };
-
-      if (mode === "create") {
-        const { error: e } = await supabase.from("exams").insert([payload]);
-        if (e) throw e;
-        setSuccess(`✅ Exam "${formData.examTitle}" created successfully!`);
-      } else {
-        const { error: e } = await supabase
-          .from("exams")
-          .update(payload)
-          .eq("id", editingId);
-        if (e) throw e;
-        setSuccess(`✅ Exam "${formData.examTitle}" updated successfully!`);
+        status: 'published',
       }
 
-      fetchList();
-      setTimeout(closeForm, 1800);
+      if (mode === 'create') {
+        const { error: e } = await supabase.from('exams').insert([payload])
+        if (e) throw e
+        setSuccess(`✅ Exam "${formData.examTitle}" created successfully!`)
+      } else {
+        const { error: e } = await supabase
+          .from('exams')
+          .update(payload)
+          .eq('id', editingId)
+        if (e) throw e
+        setSuccess(`✅ Exam "${formData.examTitle}" updated successfully!`)
+      }
+
+      fetchList()
+      setTimeout(closeForm, 1800)
     } catch (err) {
-      setError(err.message || "Failed to save exam");
+      console.error('Save error:', err)
+      setError(err.message || 'Failed to save exam')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // ── delete (with proper DB deletion & error handling) ─────────────────────
   const handleDelete = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete) return
     try {
-      setLoading(true);
-      const table = confirmDelete.type === "set" ? "question_sets" : "exams";
+      setLoading(true)
+      const table = confirmDelete.type === 'set' ? 'question_sets' : 'exams'
+
+      // ✅ FIX: Actually await the delete and check for errors
       const { error: e } = await supabase
         .from(table)
         .delete()
-        .eq("id", confirmDelete.id);
+        .eq('id', confirmDelete.id)
 
       if (e) {
-        console.error("Delete error:", e);
-        throw e;
+        console.error('Delete error from Supabase:', e)
+        throw new Error(`Delete failed: ${e.message}`)
       }
 
       // Only remove from UI after successful DB delete
-      if (confirmDelete.type === "set") {
-        setQuestionSets((prev) => prev.filter((s) => s.id !== confirmDelete.id));
+      if (confirmDelete.type === 'set') {
+        setQuestionSets((prev) => prev.filter((s) => s.id !== confirmDelete.id))
       } else {
-        setExams((prev) => prev.filter((x) => x.id !== confirmDelete.id));
+        setExams((prev) => prev.filter((x) => x.id !== confirmDelete.id))
       }
 
-      setSuccess(`✅ "${confirmDelete.title}" deleted successfully.`);
-      setTimeout(() => setSuccess(null), 2500);
+      setSuccess(`✅ "${confirmDelete.title}" deleted successfully.`)
+      setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
-      console.error("Delete failed:", err);
-      setError(err.message || "Failed to delete. Check console for details.");
+      console.error('Delete failed:', err)
+      setError(err.message || 'Failed to delete. Check console for details.')
       // Refresh list to show actual DB state
-      fetchList();
+      fetchList()
     } finally {
-      setLoading(false);
-      setConfirmDelete(null);
+      setLoading(false)
+      setConfirmDelete(null)
     }
-  };
+  }
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
@@ -464,20 +471,20 @@ function Admin() {
 
         {/* Tabs */}
         <div className="flex gap-4 mb-8">
-          {["sets", "exams"].map((tab) => (
+          {['sets', 'exams'].map((tab) => (
             <button
               key={tab}
               onClick={() => {
-                setActiveTab(tab);
-                closeForm();
+                setActiveTab(tab)
+                closeForm()
               }}
               className={`px-6 py-2 rounded-lg font-bold transition-all ${
                 activeTab === tab
-                  ? "bg-accent text-primary"
-                  : "bg-white/10 text-white hover:bg-white/20"
+                  ? 'bg-accent text-primary'
+                  : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
-              {tab === "sets" ? "Question Sets" : "Exams"}
+              {tab === 'sets' ? 'Question Sets' : 'Exams'}
             </button>
           ))}
         </div>
@@ -492,13 +499,13 @@ function Admin() {
                 size="lg"
                 className="flex items-center gap-2"
               >
-                <Plus size={20} /> Create {activeTab === "sets" ? "Question Set" : "Exam"}
+                <Plus size={20} /> Create {activeTab === 'sets' ? 'Question Set' : 'Exam'}
               </Button>
             </div>
 
             {listLoading ? (
               <LoadingSpinner text="Loading..." />
-            ) : activeTab === "sets" ? (
+            ) : activeTab === 'sets' ? (
               questionSets.length === 0 ? (
                 <GlassCard className="text-center py-10">
                   <BookOpen size={40} className="mx-auto text-white/30 mb-3" />
@@ -516,11 +523,17 @@ function Admin() {
                       <GlassCard className="border-accent/20 hover:border-accent/40 transition-all">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-accent truncate">{set.title}</h3>
+                            <h3 className="text-lg font-bold text-accent truncate">
+                              {set.title}
+                            </h3>
                             <p className="text-white/60 text-sm">
-                              {set.subject} • {set.question_count} questions •{" "}
+                              {set.subject} • {set.question_count} questions •{' '}
                               <span
-                                className={`font-medium ${set.status === "published" ? "text-green-400" : "text-yellow-400"}`}
+                                className={`font-medium ${
+                                  set.status === 'published'
+                                    ? 'text-green-400'
+                                    : 'text-yellow-400'
+                                }`}
                               >
                                 {set.status}
                               </span>
@@ -541,7 +554,7 @@ function Admin() {
                             <button
                               onClick={() =>
                                 setConfirmDelete({
-                                  type: "set",
+                                  type: 'set',
                                   id: set.id,
                                   title: set.title,
                                 })
@@ -575,12 +588,18 @@ function Admin() {
                     <GlassCard className="border-accent/20 hover:border-accent/40 transition-all">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-accent truncate">{exam.title}</h3>
+                          <h3 className="text-lg font-bold text-accent truncate">
+                            {exam.title}
+                          </h3>
                           <p className="text-white/60 text-sm">
-                            {exam.duration} min • {exam.question_count} questions • Pass:{" "}
-                            {exam.passing_score}% •{" "}
+                            {exam.duration} min • {exam.question_count} questions • Pass:{' '}
+                            {exam.passing_score}% •{' '}
                             <span
-                              className={`font-medium ${exam.status === "published" ? "text-green-400" : "text-yellow-400"}`}
+                              className={`font-medium ${
+                                exam.status === 'published'
+                                  ? 'text-green-400'
+                                  : 'text-yellow-400'
+                              }`}
                             >
                               {exam.status}
                             </span>
@@ -593,12 +612,6 @@ function Admin() {
                         </div>
                         <div className="flex gap-2 shrink-0">
                           <button
-                            onClick={() => navigate(`/exam/${exam.id}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600/30 hover:bg-green-600/50 text-green-200 text-sm font-medium transition-all"
-                          >
-                            <BookOpen size={14} /> Start
-                          </button>
-                          <button
                             onClick={() => openEdit(exam)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 text-sm font-medium transition-all"
                           >
@@ -607,7 +620,7 @@ function Admin() {
                           <button
                             onClick={() =>
                               setConfirmDelete({
-                                type: "exam",
+                                type: 'exam',
                                 id: exam.id,
                                 title: exam.title,
                               })
@@ -627,7 +640,7 @@ function Admin() {
         )}
 
         {/* ── QUESTION SET FORM (create / edit) ───────────────────────────── */}
-        {mode !== null && activeTab === "sets" && (
+        {mode !== null && activeTab === 'sets' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -636,7 +649,7 @@ function Admin() {
             <GlassCard className="border-accent/30">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-accent">
-                  {mode === "create" ? "Create Question Set" : "Edit Question Set"}
+                  {mode === 'create' ? 'Create Question Set' : 'Edit Question Set'}
                 </h2>
                 <button
                   onClick={closeForm}
@@ -654,7 +667,7 @@ function Admin() {
                   <input
                     type="text"
                     placeholder="e.g., Physics Basics"
-                    value={formData.title || ""}
+                    value={formData.title || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
                     }
@@ -668,7 +681,7 @@ function Admin() {
                   <input
                     type="text"
                     placeholder="e.g., Physics"
-                    value={formData.subject || ""}
+                    value={formData.subject || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, subject: e.target.value })
                     }
@@ -681,7 +694,7 @@ function Admin() {
                   </label>
                   <textarea
                     placeholder="Description of the question set"
-                    value={formData.description || ""}
+                    value={formData.description || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
@@ -719,7 +732,7 @@ function Admin() {
                       <textarea
                         value={q.text}
                         onChange={(e) =>
-                          handleQuestionChange(q.id, "text", e.target.value)
+                          handleQuestionChange(q.id, 'text', e.target.value)
                         }
                         placeholder="Enter question text"
                         rows="2"
@@ -755,7 +768,7 @@ function Admin() {
                         onChange={(e) =>
                           handleQuestionChange(
                             q.id,
-                            "correctAnswer",
+                            'correctAnswer',
                             e.target.value,
                           )
                         }
@@ -764,7 +777,7 @@ function Admin() {
                         <option value="" disabled>
                           Select correct answer
                         </option>
-                        {["A", "B", "C", "D"].map((l) => (
+                        {['A', 'B', 'C', 'D'].map((l) => (
                           <option key={l} value={l}>
                             {l}
                           </option>
@@ -794,10 +807,10 @@ function Admin() {
                 className="flex-1"
               >
                 {loading
-                  ? "Saving..."
-                  : mode === "create"
-                    ? "Create Question Set"
-                    : "Save Changes"}
+                  ? 'Saving...'
+                  : mode === 'create'
+                    ? 'Create Question Set'
+                    : 'Save Changes'}
               </Button>
               <Button
                 onClick={closeForm}
@@ -812,7 +825,7 @@ function Admin() {
         )}
 
         {/* ── EXAM FORM (create / edit) ───────────────────────────────────── */}
-        {mode !== null && activeTab === "exams" && (
+        {mode !== null && activeTab === 'exams' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -821,7 +834,7 @@ function Admin() {
             <GlassCard className="border-accent/30">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-accent">
-                  {mode === "create" ? "Create Exam" : "Edit Exam"}
+                  {mode === 'create' ? 'Create Exam' : 'Edit Exam'}
                 </h2>
                 <button
                   onClick={closeForm}
@@ -839,7 +852,7 @@ function Admin() {
                   <input
                     type="text"
                     placeholder="e.g., Physics Mid-Term Exam"
-                    value={formData.examTitle || ""}
+                    value={formData.examTitle || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, examTitle: e.target.value })
                     }
@@ -853,7 +866,7 @@ function Admin() {
                   </label>
                   <textarea
                     placeholder="Exam description"
-                    value={formData.examDescription || ""}
+                    value={formData.examDescription || ''}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -873,7 +886,7 @@ function Admin() {
                     <input
                       type="number"
                       placeholder="60"
-                      value={formData.examDuration || ""}
+                      value={formData.examDuration || ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -891,7 +904,7 @@ function Admin() {
                     <input
                       type="number"
                       placeholder="60"
-                      value={formData.passingScore || ""}
+                      value={formData.passingScore || ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -947,10 +960,10 @@ function Admin() {
                 className="flex-1"
               >
                 {loading
-                  ? "Saving..."
-                  : mode === "create"
-                    ? "Create Exam"
-                    : "Save Changes"}
+                  ? 'Saving...'
+                  : mode === 'create'
+                    ? 'Create Exam'
+                    : 'Save Changes'}
               </Button>
               <Button
                 onClick={closeForm}
@@ -965,7 +978,7 @@ function Admin() {
         )}
       </div>
     </div>
-  );
+  )
 }
 
-export default Admin;
+export default Admin
