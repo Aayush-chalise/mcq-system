@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorAlert from '../components/common/ErrorAlert';
@@ -7,6 +8,7 @@ import ErrorAlert from '../components/common/ErrorAlert';
 export default function TakeExam() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,10 +85,11 @@ export default function TakeExam() {
     const percentage = total ? Math.round((score / total) * 100) : 0;
 
     try {
-      const user = await supabase.auth.getUser();
-      await supabase.from('results').insert([
+      // Use Clerk user id so Results.jsx which queries by user.id can find the record
+      const userId = user?.id || null;
+      const { error: insertErr } = await supabase.from('results').insert([
         {
-          user_id: user?.data?.user?.id || '',
+          user_id: userId,
           set_id: questions[0]?.set_id || null,
           score,
           total,
@@ -94,6 +97,9 @@ export default function TakeExam() {
           answers: JSON.stringify(answers),
         },
       ]);
+      if (insertErr) {
+        console.error('Failed to save result:', insertErr);
+      }
     } catch (err) {
       console.error('Failed to save result', err);
     }
