@@ -89,7 +89,7 @@ function QuestionBank() {
           {
             user_id: user.id,
             set_id: selectedSet.id,
-            score: correct,
+            score: correct, 
             total: questions.length,
             percentage,
             answers: JSON.stringify(answers),
