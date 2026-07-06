@@ -72,7 +72,7 @@ function Admin() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [questions, setQuestions] = useState([
-    { id: 1, text: "", options: ["", "", "", ""], correctAnswer: "" },
+    { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
   ]);
   const [allPublishedSets, setAllPublishedSets] = useState([]);
   const [selectedSets, setSelectedSets] = useState([]);
@@ -140,7 +140,7 @@ function Admin() {
     setQuestions((prev) => [
       ...prev,
       {
-        id: prev.length + 1,
+        id: crypto.randomUUID(),
         text: "",
         options: ["", "", "", ""],
         correctAnswer: "",
@@ -181,7 +181,7 @@ function Admin() {
     setEditingId(null);
     setFormData({});
     setQuestions([
-      { id: 1, text: "", options: ["", "", "", ""], correctAnswer: "" },
+      { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
     ]);
     setSelectedSets([]);
     setError(null);
@@ -210,9 +210,8 @@ function Admin() {
         .order("created_at", { ascending: true });
 
       setQuestions(
-        (qs || []).map((q, i) => ({
-          id: q.id, // use real UUID so we can update/delete
-          dbId: q.id,
+        (qs || []).map((q) => ({
+          id: q.id, // keep DB UUID, use for identification
           text: q.question_text,
           options: Array.isArray(q.options)
             ? q.options
@@ -240,7 +239,7 @@ function Admin() {
     setEditingId(null);
     setFormData({});
     setQuestions([
-      { id: 1, text: "", options: ["", "", "", ""], correctAnswer: "" },
+      { id: crypto.randomUUID(), text: "", options: ["", "", "", ""], correctAnswer: "" },
     ]);
     setSelectedSets([]);
     setError(null);
@@ -300,8 +299,14 @@ function Admin() {
           .eq("id", editingId);
         if (setErr) throw setErr;
 
-        // delete old questions, re-insert
-        await supabase.from("questions").delete().eq("set_id", editingId);
+        // Delete all old questions first
+        const { error: deleteErr } = await supabase
+          .from("questions")
+          .delete()
+          .eq("set_id", editingId);
+        if (deleteErr) throw deleteErr;
+
+        // Then insert the new questions
         const toInsert = questions.map((q) => ({
           set_id: editingId,
           question_text: q.text,
@@ -384,7 +389,7 @@ function Admin() {
     }
   };
 
-  // ── delete (optimistic UI) ─────────────────────────────────────────────────
+  // ── delete (with proper DB deletion & error handling) ─────────────────────
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -394,19 +399,26 @@ function Admin() {
         .from(table)
         .delete()
         .eq("id", confirmDelete.id);
-      if (e) throw e;
 
-      // Optimistically update UI
+      if (e) {
+        console.error("Delete error:", e);
+        throw e;
+      }
+
+      // Only remove from UI after successful DB delete
       if (confirmDelete.type === "set") {
         setQuestionSets((prev) => prev.filter((s) => s.id !== confirmDelete.id));
       } else {
         setExams((prev) => prev.filter((x) => x.id !== confirmDelete.id));
       }
 
-      setSuccess(`✅ "${confirmDelete.title}" deleted.`);
+      setSuccess(`✅ "${confirmDelete.title}" deleted successfully.`);
       setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
-      setError(err.message || "Failed to delete");
+      console.error("Delete failed:", err);
+      setError(err.message || "Failed to delete. Check console for details.");
+      // Refresh list to show actual DB state
+      fetchList();
     } finally {
       setLoading(false);
       setConfirmDelete(null);
@@ -506,13 +518,17 @@ function Admin() {
                           <div className="flex-1 min-w-0">
                             <h3 className="text-lg font-bold text-accent truncate">{set.title}</h3>
                             <p className="text-white/60 text-sm">
-                              {set.subject} • {set.question_count} questions • {" "}
-                              <span className={`font-medium ${set.status === "published" ? "text-green-400" : "text-yellow-400"}`}>
+                              {set.subject} • {set.question_count} questions •{" "}
+                              <span
+                                className={`font-medium ${set.status === "published" ? "text-green-400" : "text-yellow-400"}`}
+                              >
                                 {set.status}
                               </span>
                             </p>
                             {set.description && (
-                              <p className="text-white/50 text-xs mt-1 truncate">{set.description}</p>
+                              <p className="text-white/50 text-xs mt-1 truncate">
+                                {set.description}
+                              </p>
                             )}
                           </div>
                           <div className="flex gap-2 shrink-0">
@@ -561,13 +577,18 @@ function Admin() {
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-bold text-accent truncate">{exam.title}</h3>
                           <p className="text-white/60 text-sm">
-                            {exam.duration} min • {exam.question_count} questions • Pass: {exam.passing_score}% • {" "}
-                            <span className={`font-medium ${exam.status === "published" ? "text-green-400" : "text-yellow-400"}`}>
+                            {exam.duration} min • {exam.question_count} questions • Pass:{" "}
+                            {exam.passing_score}% •{" "}
+                            <span
+                              className={`font-medium ${exam.status === "published" ? "text-green-400" : "text-yellow-400"}`}
+                            >
                               {exam.status}
                             </span>
                           </p>
                           {exam.description && (
-                            <p className="text-white/50 text-xs mt-1 truncate">{exam.description}</p>
+                            <p className="text-white/50 text-xs mt-1 truncate">
+                              {exam.description}
+                            </p>
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0">
@@ -627,31 +648,43 @@ function Admin() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Title *</label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Title *
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g., Physics Basics"
                     value={formData.title || ""}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Subject *</label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Subject *
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g., Physics"
                     value={formData.subject || ""}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Description
+                  </label>
                   <textarea
                     placeholder="Description of the question set"
                     value={formData.description || ""}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     rows="3"
                     className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                   />
@@ -665,7 +698,9 @@ function Admin() {
               {questions.map((q, idx) => (
                 <GlassCard key={q.id} className="border-white/20">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-bold text-accent">Question {idx + 1}</h4>
+                    <h4 className="text-lg font-bold text-accent">
+                      Question {idx + 1}
+                    </h4>
                     {questions.length > 1 && (
                       <button
                         onClick={() => handleRemoveQuestion(q.id)}
@@ -675,41 +710,64 @@ function Admin() {
                       </button>
                     )}
                   </div>
+
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">Question Text *</label>
+                      <label className="block text-sm font-medium text-white/80 mb-2">
+                        Question Text *
+                      </label>
                       <textarea
                         value={q.text}
-                        onChange={(e) => handleQuestionChange(q.id, "text", e.target.value)}
+                        onChange={(e) =>
+                          handleQuestionChange(q.id, "text", e.target.value)
+                        }
                         placeholder="Enter question text"
                         rows="2"
                         className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                       />
                     </div>
+
                     <div className="space-y-2">
                       {q.options.map((opt, optIdx) => (
                         <div key={optIdx}>
-                          <label className="block text-sm font-medium text-white/80 mb-1">Option {String.fromCharCode(65 + optIdx)} *</label>
+                          <label className="block text-sm font-medium text-white/80 mb-1">
+                            Option {String.fromCharCode(65 + optIdx)} *
+                          </label>
                           <input
                             type="text"
                             value={opt}
-                            onChange={(e) => handleOptionChange(q.id, optIdx, e.target.value)}
+                            onChange={(e) =>
+                              handleOptionChange(q.id, optIdx, e.target.value)
+                            }
                             placeholder={`Enter option ${String.fromCharCode(65 + optIdx)}`}
                             className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
                           />
                         </div>
                       ))}
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">Correct Answer *</label>
+                      <label className="block text-sm font-medium text-white/80 mb-2">
+                        Correct Answer *
+                      </label>
                       <select
                         value={q.correctAnswer}
-                        onChange={(e) => handleQuestionChange(q.id, "correctAnswer", e.target.value)}
+                        onChange={(e) =>
+                          handleQuestionChange(
+                            q.id,
+                            "correctAnswer",
+                            e.target.value,
+                          )
+                        }
                         className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:border-accent"
                       >
-                        <option value="" disabled>Select correct answer</option>
+                        <option value="" disabled>
+                          Select correct answer
+                        </option>
                         {["A", "B", "C", "D"].map((l) => (
-                          <option key={l} value={l}>{l}</option>
+                          <option key={l} value={l}>
+                            {l}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -718,62 +776,161 @@ function Admin() {
               ))}
             </div>
 
-            <Button onClick={handleAddQuestion} variant="secondary" size="md" className="flex items-center gap-2">
+            <Button
+              onClick={handleAddQuestion}
+              variant="secondary"
+              size="md"
+              className="flex items-center gap-2"
+            >
               <Plus size={20} /> Add Question
             </Button>
 
             <div className="flex gap-4">
-              <Button onClick={handleSaveSet} variant="primary" size="lg" disabled={loading} className="flex-1">
-                {loading ? "Saving..." : mode === "create" ? "Create Question Set" : "Save Changes"}
+              <Button
+                onClick={handleSaveSet}
+                variant="primary"
+                size="lg"
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading
+                  ? "Saving..."
+                  : mode === "create"
+                    ? "Create Question Set"
+                    : "Save Changes"}
               </Button>
-              <Button onClick={closeForm} variant="secondary" size="lg" className="flex-1">Cancel</Button>
+              <Button
+                onClick={closeForm}
+                variant="secondary"
+                size="lg"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
             </div>
           </motion.div>
         )}
 
         {/* ── EXAM FORM (create / edit) ───────────────────────────────────── */}
         {mode !== null && activeTab === "exams" && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+          >
             <GlassCard className="border-accent/30">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-accent">{mode === "create" ? "Create Exam" : "Edit Exam"}</h2>
-                <button onClick={closeForm} className="text-white/50 hover:text-white transition-colors"><X size={22} /></button>
+                <h2 className="text-2xl font-bold text-accent">
+                  {mode === "create" ? "Create Exam" : "Edit Exam"}
+                </h2>
+                <button
+                  onClick={closeForm}
+                  className="text-white/50 hover:text-white transition-colors"
+                >
+                  <X size={22} />
+                </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Exam Title *</label>
-                  <input type="text" placeholder="e.g., Physics Mid-Term Exam" value={formData.examTitle || ""} onChange={(e) => setFormData({ ...formData, examTitle: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Exam Title *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Physics Mid-Term Exam"
+                    value={formData.examTitle || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, examTitle: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Description</label>
-                  <textarea placeholder="Exam description" value={formData.examDescription || ""} onChange={(e) => setFormData({ ...formData, examDescription: e.target.value })} rows="3" className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    placeholder="Exam description"
+                    value={formData.examDescription || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        examDescription: e.target.value,
+                      })
+                    }
+                    rows="3"
+                    className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
+                  />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">Duration (minutes) *</label>
-                    <input type="number" placeholder="60" value={formData.examDuration || ""} onChange={(e) => setFormData({ ...formData, examDuration: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Duration (minutes) *
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="60"
+                      value={formData.examDuration || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          examDuration: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
+                    />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">Passing Score (%) *</label>
-                    <input type="number" placeholder="60" value={formData.passingScore || ""} onChange={(e) => setFormData({ ...formData, passingScore: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent" />
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Passing Score (%) *
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="60"
+                      value={formData.passingScore || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          passingScore: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-accent"
+                    />
                   </div>
                 </div>
               </div>
             </GlassCard>
 
             <GlassCard className="border-accent/30">
-              <h3 className="text-xl font-bold text-accent mb-4">Select Question Sets *</h3>
+              <h3 className="text-xl font-bold text-accent mb-4">
+                Select Question Sets *
+              </h3>
               {allPublishedSets.length === 0 ? (
-                <p className="text-white/60">No question sets available. Create some first!</p>
+                <p className="text-white/60">
+                  No question sets available. Create some first!
+                </p>
               ) : (
                 <div className="space-y-2">
                   {allPublishedSets.map((set) => (
-                    <label key={set.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-all border border-white/10">
-                      <input type="checkbox" checked={selectedSets.includes(set.id)} onChange={() => toggleSetSelection(set.id)} className="w-4 h-4 cursor-pointer accent-accent" />
+                    <label
+                      key={set.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-all border border-white/10"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSets.includes(set.id)}
+                        onChange={() => toggleSetSelection(set.id)}
+                        className="w-4 h-4 cursor-pointer accent-accent"
+                      />
                       <div className="flex-1">
                         <p className="font-medium text-white">{set.title}</p>
-                        <p className="text-sm text-white/60">{set.subject} • {set.question_count} questions</p>
+                        <p className="text-sm text-white/60">
+                          {set.subject} • {set.question_count} questions
+                        </p>
                       </div>
                     </label>
                   ))}
@@ -782,8 +939,27 @@ function Admin() {
             </GlassCard>
 
             <div className="flex gap-4">
-              <Button onClick={handleSaveExam} variant="primary" size="lg" disabled={loading} className="flex-1">{loading ? "Saving..." : mode === "create" ? "Create Exam" : "Save Changes"}</Button>
-              <Button onClick={closeForm} variant="secondary" size="lg" className="flex-1">Cancel</Button>
+              <Button
+                onClick={handleSaveExam}
+                variant="primary"
+                size="lg"
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading
+                  ? "Saving..."
+                  : mode === "create"
+                    ? "Create Exam"
+                    : "Save Changes"}
+              </Button>
+              <Button
+                onClick={closeForm}
+                variant="secondary"
+                size="lg"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
             </div>
           </motion.div>
         )}
