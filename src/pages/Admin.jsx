@@ -121,7 +121,7 @@ function Admin() {
     if (!e) setAllPublishedSets(data || [])
   }
 
-  // ── access guard ─────────────────────────────────────────���────────────────
+  // ── access guard ─────────────────────────────────────────────────────────
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-blue-900 to-primary text-white pt-24 pb-8 flex items-center justify-center">
@@ -287,14 +287,24 @@ function Admin() {
         setSuccess(`✅ Question Set "${formData.title}" created successfully!`)
       } else {
         // ✅ FIX: Delete old questions FIRST with error check
-        const { error: deleteErr } = await supabase
+        const { data: deletedData, error: deleteErr, count: deletedCount } = await supabase
           .from('questions')
           .delete()
           .eq('set_id', editingId)
+          .select()
+
+        console.log('🗑️ DELETE RESPONSE:', { deletedCount, deleteErr, deletedData })
 
         if (deleteErr) {
-          console.error('Delete error:', deleteErr)
+          console.error('❌ Delete error:', deleteErr)
           throw new Error(`Failed to delete old questions: ${deleteErr.message}`)
+        }
+
+        // ⚠️ CRITICAL: Check if RLS is blocking DELETE
+        if (deletedCount === 0) {
+          console.warn('⚠️ WARNING: Delete returned 0 rows. RLS policy may be blocking deletes!')
+          console.log('Set ID:', editingId)
+          console.log('User ID:', user.id)
         }
 
         // ✅ Update set metadata
@@ -327,7 +337,7 @@ function Admin() {
       fetchList()
       setTimeout(closeForm, 1800)
     } catch (err) {
-      console.error('Save error:', err)
+      console.error('❌ Save error:', err)
       setError(err.message || 'Failed to save question set')
     } finally {
       setLoading(false)
@@ -387,7 +397,7 @@ function Admin() {
       fetchList()
       setTimeout(closeForm, 1800)
     } catch (err) {
-      console.error('Save error:', err)
+      console.error('❌ Save error:', err)
       setError(err.message || 'Failed to save exam')
     } finally {
       setLoading(false)
@@ -401,15 +411,30 @@ function Admin() {
       setLoading(true)
       const table = confirmDelete.type === 'set' ? 'question_sets' : 'exams'
 
-      // ✅ FIX: Actually await the delete and check for errors
-      const { error: e } = await supabase
+      // ✅ FIX: Actually await the delete and check for errors + row count
+      const { data: deletedData, error: e, count } = await supabase
         .from(table)
         .delete()
         .eq('id', confirmDelete.id)
+        .select()
+
+      console.log(`🗑️ ${table} DELETE:`, { count, error: e, data: deletedData })
 
       if (e) {
-        console.error('Delete error from Supabase:', e)
+        console.error('❌ Delete error from Supabase:', e)
         throw new Error(`Delete failed: ${e.message}`)
+      }
+
+      // ⚠️ CRITICAL: Check if RLS is silently blocking the delete
+      if (count === 0) {
+        console.warn(
+          `⚠️ WARNING: Delete returned 0 rows! RLS policy may be blocking deletes on ${table}!`,
+        )
+        console.log(`Trying to delete ${table} with ID:`, confirmDelete.id)
+        console.log('User ID:', user.id)
+        throw new Error(
+          `Delete blocked: RLS policy may prevent deletion. Check Supabase policies for ${table}`,
+        )
       }
 
       // Only remove from UI after successful DB delete
@@ -422,8 +447,8 @@ function Admin() {
       setSuccess(`✅ "${confirmDelete.title}" deleted successfully.`)
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
-      console.error('Delete failed:', err)
-      setError(err.message || 'Failed to delete. Check console for details.')
+      console.error('❌ Delete failed:', err)
+      setError(err.message || 'Failed to delete. Check browser console.')
       // Refresh list to show actual DB state
       fetchList()
     } finally {
